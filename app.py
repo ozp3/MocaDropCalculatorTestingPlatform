@@ -1,5 +1,3 @@
-#live price not working
-
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 import requests
 import threading
@@ -14,8 +12,8 @@ COINGECKO_API_URL = "https://api.coingecko.com/api/v3/simple/price"
 MOCA_TOKEN_NAME = "KIP PROTOCOL"
 TOKENS_OFFERED = "50,000,000"
 
-current_token_price = {"price": "N/A", "last_updated": None}  # Önceki değeri saklamak için sözlük kullanıyoruz
-price_lock = threading.Lock()  # Eşzamanlı erişim için kilit
+current_token_price = {"price": "N/A", "last_updated": None}
+price_lock = threading.Lock()
 
 # Function to fetch data from Mocaverse API
 def get_pool_data():
@@ -26,7 +24,6 @@ def get_pool_data():
         staking_power_burnt = float(data.get("stakingPowerBurnt", 0))
         registration_end_date = data.get("registrationEndDate", "N/A")
         
-        # Format the registration end date
         if registration_end_date != "N/A":
             try:
                 dt = datetime.strptime(registration_end_date, "%Y-%m-%dT%H:%M:%S.%fZ")
@@ -38,7 +35,6 @@ def get_pool_data():
     except Exception as e:
         print(f"Error fetching Mocaverse data: {e}")
         return None, "Error fetching date"
-
 
 # Function to fetch token price from Coingecko API
 def fetch_token_price():
@@ -81,7 +77,7 @@ def index():
         if not your_sp_burn:
             return render_template(
                 "index.html",
-                error="All fields are required.",
+                error="Your SP Burn is required.",
                 token_name=MOCA_TOKEN_NAME,
                 tokens_offered=TOKENS_OFFERED,
                 total_sp_burnt=f"{total_sp_burnt:,.0f}",
@@ -92,7 +88,8 @@ def index():
 
         try:
             your_sp_burn = int(your_sp_burn)
-            token_price = float(current_token_price["price"])
+            with price_lock:
+                token_price = float(current_token_price["price"])
             tokens_offered_int = int(TOKENS_OFFERED.replace(",", ""))
 
             reward = your_sp_burn * (tokens_offered_int / total_sp_burnt) * token_price
