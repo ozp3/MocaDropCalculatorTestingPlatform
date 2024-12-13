@@ -99,7 +99,6 @@
         const priceElement = document.getElementById("live_price");
         const timestampElement = document.getElementById("last_updated");
         try {
-          // Fetch token price only when the backend has updated it
           const response = await fetch("/get_price");
           if (!response.ok) {
             throw new Error("Failed to fetch token price");
@@ -119,9 +118,9 @@
         }
       }
 
-      // Sync token price with backend's updated intervals
       document.addEventListener("DOMContentLoaded", () => {
-        setInterval(updateTokenPrice, 5000);
+        updateTokenPrice();
+        setInterval(updateTokenPrice, 30000);
       });
     </script>
   </head>
