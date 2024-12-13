@@ -50,13 +50,76 @@ def setup_routes(app):
                 token_price=None,
             )
 
-        # Test için "ongoing" zorlaması
-        # is_ended = check_deadline(selected_project["registrationEndDate"])
-        is_ended = False  # Proje her zaman ongoing olarak kabul ediliyor
+        is_ended = check_deadline(selected_project["registrationEndDate"])
 
+        # Fetch CoinGecko price regardless of the status
         token_price = None
-        if not is_ended and selected_project["tokenTicker"]:
+        if selected_project["tokenTicker"]:
             token_price = fetch_token_price(selected_project["tokenTicker"])
+
+        if request.method == "POST" and "calculate" in request.form:
+            custom_price = request.form.get("custom_price")
+            your_sp_burn = request.form.get("your_sp_burn")
+
+            if not custom_price or not your_sp_burn:
+                return render_template(
+                    "index.html",
+                    error="All fields are required.",
+                    projects=projects,
+                    token_name=selected_project["name"],
+                    tokens_offered=f"{float(selected_project['tokensOffered']):,.0f}",
+                    total_sp_burnt=f"{total_sp_burnt:,.0f}",
+                    registration_end_date=registration_end_date,
+                    is_ended=is_ended,
+                    token_price=token_price,
+                )
+
+            try:
+                custom_price = float(custom_price)
+                your_sp_burn = int(your_sp_burn)
+            except ValueError:
+                return render_template(
+                    "index.html",
+                    error="Invalid input. Please enter numeric values.",
+                    projects=projects,
+                    token_name=selected_project["name"],
+                    tokens_offered=f"{float(selected_project['tokensOffered']):,.0f}",
+                    total_sp_burnt=f"{total_sp_burnt:,.0f}",
+                    registration_end_date=registration_end_date,
+                    is_ended=is_ended,
+                    token_price=token_price,
+                )
+
+            custom_price_decimals = len(str(custom_price).split(".")[1]) if "." in str(custom_price) else 0
+
+            try:
+                reward = your_sp_burn * (float(selected_project["tokensOffered"]) / total_sp_burnt) * custom_price
+                tokens_received = your_sp_burn * (float(selected_project["tokensOffered"]) / total_sp_burnt)
+            except ZeroDivisionError:
+                return render_template(
+                    "index.html",
+                    error="Total SP Burnt cannot be zero.",
+                    projects=projects,
+                    token_name=selected_project["name"],
+                    tokens_offered=f"{float(selected_project['tokensOffered']):,.0f}",
+                    total_sp_burnt=f"{total_sp_burnt:,.0f}",
+                    registration_end_date=registration_end_date,
+                    is_ended=is_ended,
+                    token_price=token_price,
+                )
+
+            return redirect(
+                url_for(
+                    "result",
+                    token_name=selected_project["name"],
+                    tokens_offered=f"{float(selected_project['tokensOffered']):,.0f}",
+                    total_sp_burnt=f"{total_sp_burnt:,.0f}",
+                    token_price=f"{custom_price:.{custom_price_decimals}f}$",
+                    your_sp_burn=f"{your_sp_burn:,}",
+                    reward=f"{reward:.2f}$",
+                    tokens_received=f"{tokens_received:,.2f}",
+                )
+            )
 
         return render_template(
             "index.html",

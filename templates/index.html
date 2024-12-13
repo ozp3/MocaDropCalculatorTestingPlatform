@@ -105,9 +105,11 @@
   </head>
   <body>
     <h1>Moca Drop Reward Calculator</h1>
+    {% if not is_ended %}
     <p style="text-align: center; color: #e994b8; font-weight: bold">
       Registration Ends: {{ registration_end_date }}
     </p>
+    {% endif %}
     <form method="post" action="{{ url_for('index') }}">
       <label for="project">Select Project:</label>
       <select id="project" name="project" onchange="this.form.submit()">
@@ -145,18 +147,18 @@
         readonly
       /><br />
 
-      {% if not is_ended %}
       {% if token_price %}
       <label for="current_price">Current Token Price (from CoinGecko):</label>
       <input
         type="text"
         id="current_price"
         name="current_price"
-        value="{{ token_price }} USD"
+        value="{{ token_price }}$"
         readonly
       /><br />
       {% endif %}
 
+      {% if not is_ended %}
       <label for="your_sp_burn">Your SP Burn:</label>
       <input
         type="number"
@@ -171,7 +173,6 @@
         id="custom_price"
         name="custom_price"
         step="any"
-        {% if token_price %}placeholder="Using CoinGecko Price" readonly{% endif %}
       /><br />
       {% endif %}
 
