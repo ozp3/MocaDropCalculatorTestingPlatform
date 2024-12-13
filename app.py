@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, jsonify 
 import requests
 import threading
 import time
@@ -12,7 +12,8 @@ COINGECKO_API_URL = "https://api.coingecko.com/api/v3/simple/price"
 MOCA_TOKEN_NAME = "KIP PROTOCOL"
 TOKENS_OFFERED = "50,000,000"
 
-current_token_price = {"price": "N/A", "last_updated": None}
+# Store the current token price and its last updated time
+token_price_data = {"price": "N/A", "last_updated": None}
 price_lock = threading.Lock()
 
 # Function to fetch data from Mocaverse API
@@ -23,14 +24,14 @@ def get_pool_data():
         data = response.json()
         staking_power_burnt = float(data.get("stakingPowerBurnt", 0))
         registration_end_date = data.get("registrationEndDate", "N/A")
-        
+
         if registration_end_date != "N/A":
             try:
                 dt = datetime.strptime(registration_end_date, "%Y-%m-%dT%H:%M:%S.%fZ")
                 registration_end_date = dt.strftime("%Y-%m-%d %H:%M:%S UTC")
             except ValueError:
                 registration_end_date = "Invalid date format"
-        
+
         return staking_power_burnt, registration_end_date
     except Exception as e:
         print(f"Error fetching Mocaverse data: {e}")
@@ -38,20 +39,20 @@ def get_pool_data():
 
 # Function to fetch token price from Coingecko API
 def fetch_token_price():
-    global current_token_price
+    global token_price_data
     while True:
         try:
             response = requests.get(COINGECKO_API_URL, params={"ids": "kip", "vs_currencies": "usd"})
             response.raise_for_status()
             data = response.json()
             with price_lock:
-                current_token_price["price"] = data.get("kip", {}).get("usd", "N/A")
-                current_token_price["last_updated"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
+                token_price_data["price"] = data.get("kip", {}).get("usd", "N/A")
+                token_price_data["last_updated"] = datetime.utcnow().strftime("%Y-%m-%d %H:%M:%S UTC")
         except Exception as e:
             print(f"Error fetching token price: {e}")
             with price_lock:
-                current_token_price["price"] = "N/A"
-                current_token_price["last_updated"] = None
+                token_price_data["price"] = "N/A"
+                token_price_data["last_updated"] = None
         time.sleep(30)
 
 # Start a background thread to update the token price
@@ -77,19 +78,18 @@ def index():
         if not your_sp_burn:
             return render_template(
                 "index.html",
-                error="Your SP Burn is required.",
+                error="All fields are required.",
                 token_name=MOCA_TOKEN_NAME,
                 tokens_offered=TOKENS_OFFERED,
                 total_sp_burnt=f"{total_sp_burnt:,.0f}",
                 registration_end_date=registration_end_date,
-                live_price=current_token_price["price"],
-                last_updated=current_token_price["last_updated"],
+                live_price=token_price_data["price"],
+                last_updated=token_price_data["last_updated"],
             )
 
         try:
             your_sp_burn = int(your_sp_burn)
-            with price_lock:
-                token_price = float(current_token_price["price"])
+            token_price = float(token_price_data["price"])
             tokens_offered_int = int(TOKENS_OFFERED.replace(",", ""))
 
             reward = your_sp_burn * (tokens_offered_int / total_sp_burnt) * token_price
@@ -102,8 +102,8 @@ def index():
                 tokens_offered=TOKENS_OFFERED,
                 total_sp_burnt=f"{total_sp_burnt:,.0f}",
                 registration_end_date=registration_end_date,
-                live_price=current_token_price["price"],
-                last_updated=current_token_price["last_updated"],
+                live_price=token_price_data["price"],
+                last_updated=token_price_data["last_updated"],
             )
         except ZeroDivisionError:
             return render_template(
@@ -113,8 +113,8 @@ def index():
                 tokens_offered=TOKENS_OFFERED,
                 total_sp_burnt=f"{total_sp_burnt:,.0f}",
                 registration_end_date=registration_end_date,
-                live_price=current_token_price["price"],
-                last_updated=current_token_price["last_updated"],
+                live_price=token_price_data["price"],
+                last_updated=token_price_data["last_updated"],
             )
 
         return redirect(
@@ -136,14 +136,9 @@ def index():
         tokens_offered=TOKENS_OFFERED,
         total_sp_burnt=f"{total_sp_burnt:,.0f}",
         registration_end_date=registration_end_date,
-        live_price=current_token_price["price"],
-        last_updated=current_token_price["last_updated"],
+        live_price=token_price_data["price"],
+        last_updated=token_price_data["last_updated"],
     )
-
-@app.route("/get_price")
-def get_price():
-    with price_lock:
-        return jsonify(current_token_price)
 
 @app.route("/result")
 def result():
