@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Moca Drop Reward Calculator</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #282828;
+        margin: 0;
+        padding: 0;
+        color: #ffffff;
+      }
+      h1 {
+        text-align: center;
+        color: #e994b8;
+        margin-top: 20px;
+        font-weight: bold;
+        text-transform: uppercase;
+      }
+      form {
+        max-width: 500px;
+        margin: 20px auto;
+        padding: 20px;
+        background-color: #fff;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        color: #333;
+      }
+      label {
+        display: block;
+        font-weight: bold;
+        margin-bottom: 5px;
+        color: #555;
+      }
+      input {
+        width: 100%;
+        padding: 10px;
+        margin-bottom: 15px;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+      }
+      input[readonly] {
+        background-color: #f0f0f0;
+        color: #666;
+      }
+      input::-webkit-outer-spin-button,
+      input::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+      input[type="number"] {
+        -moz-appearance: textfield;
+      }
+      button {
+        width: 100%;
+        padding: 10px;
+        background-color: #e994b8;
+        color: #fff;
+        border: none;
+        border-radius: 4px;
+        font-size: 16px;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #d683a5;
+      }
+      p {
+        margin: 10px 0;
+      }
+      p.error {
+        color: red;
+        font-weight: bold;
+        text-align: center;
+      }
+      h2 {
+        text-align: center;
+        color: #ffffff;
+      }
+      footer {
+        margin-top: 50px;
+        text-align: center;
+        font-size: 14px;
+        color: gray;
+      }
+      footer a {
+        color: gray;
+        text-decoration: none;
+      }
+      footer a:hover {
+        text-decoration: underline;
+      }
+    </style>
+    <script>
+      async function updateTokenPrice() {
+        const priceElement = document.getElementById("live_price");
+        const timestampElement = document.getElementById("last_updated");
+        try {
+          // Fetch token price only when the backend has updated it
+          const response = await fetch("/get_price");
+          if (!response.ok) {
+            throw new Error("Failed to fetch token price");
+          }
+          const data = await response.json();
+          if (data.price && data.price !== "N/A") {
+            priceElement.textContent = `$${data.price}`;
+            timestampElement.textContent = `Last updated: ${data.last_updated}`;
+          } else {
+            priceElement.textContent = "Price not available";
+            timestampElement.textContent = "";
+          }
+        } catch (error) {
+          console.error("Error fetching token price:", error);
+          priceElement.textContent = "Error fetching price";
+          timestampElement.textContent = "";
+        }
+      }
+
+      // Sync token price with backend's updated intervals
+      document.addEventListener("DOMContentLoaded", () => {
+        setInterval(updateTokenPrice, 1000);
+      });
+    </script>
+  </head>
+  <body>
+    <h1>Moca Drop Reward Calculator</h1>
+    <p style="text-align: center; color: #e994b8; font-weight: bold">
+      Registration Ends: {{ registration_end_date }}
+    </p>
+    <form method="post" action="{{ url_for('index') }}">
+      <label for="token_name">Moca Drop Token Name:</label>
+      <input
+        type="text"
+        id="token_name"
+        name="token_name"
+        value="{{ token_name }}"
+        readonly
+      /><br />
+
+      <label for="tokens_offered">Tokens Offered:</label>
+      <input
+        type="text"
+        id="tokens_offered"
+        name="tokens_offered"
+        value="{{ tokens_offered }}"
+        readonly
+      /><br />
+
+      <label for="total_sp_burnt">Total SP Burnt:</label>
+      <input
+        type="text"
+        id="total_sp_burnt"
+        name="total_sp_burnt"
+        value="{{ total_sp_burnt }}"
+        readonly
+      /><br />
+
+      <label for="your_sp_burn">Your SP Burn:</label>
+      <input
+        type="number"
+        id="your_sp_burn"
+        name="your_sp_burn"
+        required
+      /><br />
+
+      <p>
+        <strong>Live Token Price ($):</strong>
+        <span id="live_price">Loading...</span>
+      </p>
+      <p
+        id="last_updated"
+        style="font-size: 12px; color: gray; text-align: center"
+      ></p>
+
+      <button type="submit">Calculate</button>
+    </form>
+
+    {% if error %}
+    <p class="error">{{ error }}</p>
+    {% endif %}
+
+    <footer>
+      Made by <a href="https://x.com/0xOzp" target="_blank">@0xozp</a>
+    </footer>
+  </body>
+</html>
